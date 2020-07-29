@@ -1,3 +1,8 @@
+use std::fs;
+use std::fs::File;
+
+// Chip-8
+
 struct Chip8 {
     memory: [u8; 4096],
     pc: u16,
@@ -48,7 +53,19 @@ impl Chip8 {
         }
     }
 
-    fn load_game(&mut self, name: &str) {}
+    fn load_game(&mut self, filename: &String) {
+        match std::fs::read(filename) {
+            Ok(bytes) => {
+                // Load game into memory.
+                for (i, value) in bytes.iter().enumerate() {
+                    self.memory[512 + i] = *value;
+                }
+            }
+            Err(e) => {
+                panic!("{}", e);
+            }
+        }
+    }
 
     fn emulate_cycle(&mut self) {
         // Fetch opcode
@@ -65,6 +82,8 @@ impl Chip8 {
 
     fn set_keys(&mut self) {}
 }
+
+// Display
 
 struct Display {
     screen: [u8; 2048], // 64x32 pixels.
@@ -85,14 +104,20 @@ impl Display {
 fn main() {
     let mut chip8 = Chip8::new();
 
-    chip8.load_game("pong");
+    chip8.load_game(&String::from("./resources/roms/PONG"));
 
-    loop {
-        chip8.emulate_cycle();
-        if chip8.display.should_draw {
-            chip8.display.draw();
-        }
-
-        chip8.set_keys();
+    print!("[");
+    for a in chip8.memory.iter() {
+        print!("{}, ", a);
     }
+    print!("]");
+
+    //loop {
+    //    chip8.emulate_cycle();
+    //    if chip8.display.should_draw {
+    //        chip8.display.draw();
+    //    }
+
+    //    chip8.set_keys();
+    //}
 }

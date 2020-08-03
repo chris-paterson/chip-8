@@ -1,10 +1,20 @@
 #[allow(dead_code)]
+mod display;
+
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
+use sdl2::pixels::Color;
+use sdl2::rect::Rect;
+use std::time::Duration;
+
 use display::Display;
 use std::fs;
 use std::fs::File;
+use std::u8;
 
-mod display;
-mod renderer;
+const PIXEL_SIZE: u32 = 16;
+const SCREEN_WIDTH: u32 = 64;
+const SCREEN_HEIGHT: u32 = 32;
 
 // Chip-8
 
@@ -57,7 +67,6 @@ impl Chip8 {
             display: Display::new(),
         }
     }
-
     /// Loads the game at the specified path into memory.
     fn load_game(&mut self, filename: &String) {
         // TODO: Return error instead of panicking.
@@ -109,23 +118,78 @@ impl Chip8 {
 fn main() {
     let mut chip8 = Chip8::new();
 
+    // Setup window
+    let sdl_context = sdl2::init().unwrap();
+    let video_subsystem = sdl_context.video().unwrap();
+
+    let window = video_subsystem
+        .window(
+            "Chip 8",
+            SCREEN_WIDTH * PIXEL_SIZE,
+            SCREEN_HEIGHT * PIXEL_SIZE,
+        )
+        .build()
+        .unwrap();
+
+    let mut canvas = window.into_canvas().build().unwrap();
+    let mut event_pump = sdl_context.event_pump().unwrap();
+
     chip8.load_game(&String::from("./resources/roms/PONG"));
 
-    //print!("[");
-    //for a in chip8.memory.iter() {
-    //    print!("{}, ", a);
-    //}
-    //print!("]");
+    let mut a: usize = 0;
 
-    chip8.display.draw();
+    let frame_rate = 1000 / 60; // Desired FPS
+    let mut timer = sdl_context.timer().unwrap();
+    'running: loop {
+        let frame_start = timer.ticks();
 
-    //loop {
-    //    chip8.emulate_cycle();
-    //    if chip8.display.should_draw {
-    //        chip8.display.draw();
-    //    }
+        chip8.emulate_cycle();
+        chip8.set_keys();
 
-    //    chip8.set_keys();
-    //    break;
-    //}
+        chip8.display.set_pixel_on(a % (64 * 32));
+        a += 1;
+
+        println!("{}", a);
+
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => break 'running,
+                _ => {}
+            }
+        }
+
+        // Set background to black.
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        canvas.clear();
+
+        // Draw pixels.
+        for (i, pixel) in chip8.display.screen.iter().enumerate() {
+            let x = (i as u32) % SCREEN_WIDTH;
+            let y = (i as u32) / SCREEN_WIDTH;
+
+            if *pixel == u8::MAX {
+                canvas.set_draw_color(Color::RGB(255, 255, 255));
+                canvas.fill_rect(Rect::new(
+                    (x * PIXEL_SIZE) as i32,
+                    (y * PIXEL_SIZE) as i32,
+                    PIXEL_SIZE,
+                    PIXEL_SIZE,
+                ));
+            }
+        }
+
+        canvas.present();
+
+        let frame_end = timer.ticks();
+        let time_delta = frame_end - frame_start;
+
+        if frame_rate > time_delta {
+            let sleep_time = (frame_rate - time_delta) as u64;
+            std::thread::sleep(Duration::from_millis(sleep_time));
+        }
+    }
 }

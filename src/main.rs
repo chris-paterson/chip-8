@@ -1,5 +1,10 @@
+#[allow(dead_code)]
+use display::Display;
 use std::fs;
 use std::fs::File;
+
+mod display;
+mod renderer;
 
 // Chip-8
 
@@ -53,7 +58,9 @@ impl Chip8 {
         }
     }
 
+    /// Loads the game at the specified path into memory.
     fn load_game(&mut self, filename: &String) {
+        // TODO: Return error instead of panicking.
         match std::fs::read(filename) {
             Ok(bytes) => {
                 // Load game into memory.
@@ -71,34 +78,32 @@ impl Chip8 {
         // Fetch opcode
         let opcode: u16 = (self.memory[self.pc as usize] as u16) << 8
             | (self.memory[(self.pc + 1) as usize] as u16);
-
-        println!("opcode: {}", opcode);
         // Decode opcode
+        match (opcode) {
+            0xA000...0xAFFF => {
+                // ANNN: Set I to the address NNN
+                self.i = opcode & 0x0FFF;
+                self.pc += 2;
+            }
+            _ => println!("Unknown opcode: {}", opcode),
+        }
 
         // Execute opcode
 
         // Update timers
-    }
+        if self.delay_timer > 0 {
+            self.delay_timer -= 1;
+        }
 
-    fn set_keys(&mut self) {}
-}
-
-// Display
-
-struct Display {
-    screen: [u8; 2048], // 64x32 pixels.
-    should_draw: bool,
-}
-
-impl Display {
-    fn new() -> Self {
-        Display {
-            screen: [0; 2048],
-            should_draw: false,
+        if self.sound_timer > 0 {
+            if self.sound_timer == 1 {
+                println!("BEEP!");
+            }
+            self.sound_timer -= 1;
         }
     }
 
-    fn draw(&mut self) {}
+    fn set_keys(&mut self) {}
 }
 
 fn main() {
@@ -106,11 +111,13 @@ fn main() {
 
     chip8.load_game(&String::from("./resources/roms/PONG"));
 
-    print!("[");
-    for a in chip8.memory.iter() {
-        print!("{}, ", a);
-    }
-    print!("]");
+    //print!("[");
+    //for a in chip8.memory.iter() {
+    //    print!("{}, ", a);
+    //}
+    //print!("]");
+
+    chip8.display.draw();
 
     //loop {
     //    chip8.emulate_cycle();
@@ -119,5 +126,6 @@ fn main() {
     //    }
 
     //    chip8.set_keys();
+    //    break;
     //}
 }

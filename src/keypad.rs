@@ -8,7 +8,7 @@ impl Keypad {
     }
 
     pub fn key_down(&mut self, index: u8) {
-        println!("key {} pressed", index);
+        //println!("key {} pressed", index);
         self.keys[index as usize] = true;
     }
 

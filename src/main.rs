@@ -1,12 +1,11 @@
-#[allow(dead_code)]
 mod display;
 mod keypad;
 
 use sdl2::event::Event;
+use sdl2::gfx::framerate::FPSManager;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use std::time::Duration;
 
 use rand::Rng;
 
@@ -238,10 +237,15 @@ fn main() {
     let mut canvas = window.into_canvas().build().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    chip8.load_game(&String::from("./resources/roms/test_opcode"));
+    chip8.load_game(&String::from("./resources/roms/INVADERS"));
+
+    let mut fps_manager = FPSManager::new();
+    match fps_manager.set_framerate(60) {
+        Ok(_) => println!("Framerate set"),
+        Err(error) => println!("Framerate not set: {}", error),
+    }
 
     let mut timer = sdl_context.timer().unwrap();
-    let frame_rate = 1000 / 60; // Desired FPS
     'running: loop {
         let frame_start = timer.ticks();
 
@@ -312,25 +316,29 @@ fn main() {
             let x = (i as u32) % SCREEN_WIDTH;
             let y = (i as u32) / SCREEN_WIDTH;
 
-            if *pixel == u8::MAX {
+            // We only need to draw pixels that are on since the background has
+            // been cleared to black already.
+            if *pixel == 1 {
                 canvas.set_draw_color(Color::RGB(255, 255, 255));
-                canvas.fill_rect(Rect::new(
+                match canvas.fill_rect(Rect::new(
                     (x * PIXEL_SIZE) as i32,
                     (y * PIXEL_SIZE) as i32,
                     PIXEL_SIZE,
                     PIXEL_SIZE,
-                ));
+                )) {
+                    Ok(_) => {}
+                    Err(err) => panic!(err),
+                };
             }
         }
 
         canvas.present();
 
+        fps_manager.delay();
+
+        // STATS
         let frame_end = timer.ticks();
         let time_delta = frame_end - frame_start;
-
-        if frame_rate > time_delta {
-            let sleep_time = (frame_rate - time_delta) as u64;
-            std::thread::sleep(Duration::from_millis(sleep_time));
-        }
+        println!("fps: {}", 1000 / time_delta);
     }
 }

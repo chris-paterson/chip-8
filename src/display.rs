@@ -11,7 +11,7 @@ impl Display {
     }
 
     pub fn set_pixel(&mut self, x: usize, y: usize, on: bool) {
-        self.screen[x + y * WIDTH] = if on { 255 } else { 0 };
+        self.screen[x + y * WIDTH] = if on { 1 } else { 0 };
     }
 
     pub fn get_pixel(&mut self, x: usize, y: usize) -> bool {
